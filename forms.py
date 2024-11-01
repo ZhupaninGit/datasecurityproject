@@ -1,16 +1,12 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField,PasswordField,SubmitField
 from wtforms.validators import Email,DataRequired,Length,ValidationError,EqualTo
-from app import User
 import re
 
 class LoginForm(FlaskForm):
     email = StringField('E-mail', validators=[DataRequired("Поле не може бути пустим"), Email("Некоректна електронна адреса")])
     password = PasswordField('Пароль', validators=[DataRequired("Поле не може бути пустим")])
     submit = SubmitField('Увійти')
-
-
-from flask_wtf import FlaskForm
 
 
 class RegistrationForm(FlaskForm):
@@ -34,7 +30,8 @@ class RegistrationForm(FlaskForm):
         if not re.search(r'[!@#$%^&*(),.?]', password_data):
             raise ValidationError("Пароль має містити щонайменше 1 спеціальний символ (!@#$%^&*(),.?)")
 
-    # def validate_email(self, email):
-    #     user = User.query.filter_by(email=email.data).first()
-    #     if user:
-    #         raise ValidationError('Користувач з таким e-mail вже існує.')
+    def validate_email(self, email):
+        from models import User
+        user = User.query.filter_by(email=email.data).first()
+        if user:
+            raise ValidationError('Користувач з таким e-mail вже існує.')

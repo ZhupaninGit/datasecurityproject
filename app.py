@@ -2,27 +2,19 @@ from flask import Flask,render_template,url_for,flash,redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin,login_required,login_user,LoginManager,current_user,logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from extensions import db,login_manager
+
+from models import User
 
 app = Flask(__name__)
 
 app.secret_key = 'secretTkey'
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"  
+db.init_app(app=app)
 
-db = SQLAlchemy(app)
-
-login_manager = LoginManager()
 login_manager.init_app(app=app)
 login_manager.login_view = "login"
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-class User(db.Model,UserMixin):
-    id = db.Column(db.Integer,primary_key=True)
-    email = db.Column(db.String(50),nullable=False,unique=True)
-    password = db.Column(db.String(80),nullable=False)
-
+login_manager.login_message = "Щоб побачити цю сторінку необхідно авторизуватися!"
 
 
 @app.route("/")
@@ -42,13 +34,16 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and check_password_hash(user.password, form.password.data):
-            print('Login successful!')
-            login_user(user=user)
-            return redirect(url_for('index'))
+        if user:
+            if check_password_hash(user.password, form.password.data):
+                flash('Успішний вхід')
+                login_user(user=user)
+                return redirect(url_for('index'))
+            else:
+                flash('Неправильна електронна адреса або пароль.')
         else:
-            print('Login dd!')
-            flash('Invalid email or password.')
+            flash(f'Користувача {form.email.data} не існує. Зареєструйте новий аккаунт')
+            return redirect(url_for('register'))
     return render_template('login.html', form=form)
 
 @app.route("/register",methods=["GET","POST"])
@@ -60,7 +55,7 @@ def register():
         new_user = User(email=form.email.data, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
-        flash('Registration successful. Please log in.')
+        flash('Реєстрація успішна.Тепер Ви можете зайти у свій аккаунт.')
         return redirect(url_for('login'))
     return render_template('register.html', form=form)
 
