@@ -163,4 +163,4 @@ cython_debug/
  instace/
  create_db.py
 
- 
+ .idea/

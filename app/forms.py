@@ -1,4 +1,4 @@
-from flask_wtf import FlaskForm
+from flask_wtf import FlaskForm, RecaptchaField
 from wtforms import StringField,PasswordField,SubmitField
 from wtforms.validators import Email,DataRequired,Length,ValidationError,EqualTo
 import re
@@ -16,6 +16,7 @@ class RegistrationForm(FlaskForm):
         Length(min=8, message='Пароль має складатися з 8 і більше символів.')
     ])
     repeat_pass = PasswordField(validators=[DataRequired("Поле не може бути пустим"), EqualTo("password", message="Паролі не співпадають.")], label="Повторіть пароль")
+    captcha = RecaptchaField()
     submit = SubmitField('Зареєструвати аккаунт')
 
     def validate_password(self, password):
@@ -31,7 +32,7 @@ class RegistrationForm(FlaskForm):
             raise ValidationError("Пароль має містити щонайменше 1 спеціальний символ (!@#$%^&*(),.?)")
 
     def validate_email(self, email):
-        from models import User
+        from app.models import User
         user = User.query.filter_by(email=email.data).first()
         if user:
             raise ValidationError('Користувач з таким e-mail вже існує.')
