@@ -22,6 +22,19 @@
                             <div class="d-flex justify-content-center">
                                 <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-lg px-5">Вийти</a>
                             </div>
+                            <hr>
+                            
+                            {% if user.confirmed %}
+                                <p class="text-white-50 mb-5">Ваш аккаунт активовано.</p>
+                            {% else %}
+                                <div class="d-flex justify-content-center">
+                                    <a href="{{ url_for('send_confirmation',email=user.email) }}" class="btn btn-outline-light btn-lg px-5">Активувати аккаунт</a>
+                                </div>
+                            {% endif %}
+
+     
+
+
                         </div>
                     </div>
                 </div>

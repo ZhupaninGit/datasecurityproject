@@ -17,8 +17,7 @@ captcha_value = ''.join(random.choices(string.ascii_letters + string.digits, k=6
 @app.route("/")
 @login_required
 def index():
-    user = current_user
-    return render_template("mainpage.html")
+    return render_template("mainpage.html",user=current_user)
 
 @app.route("/logout")
 def logout():
@@ -34,6 +33,7 @@ def login():
         if user:
             if check_password_hash(user.password, form.password.data):
                 flash('Успішний вхід')
+                print("we are here")
                 login_user(user=user)
                 return redirect(url_for('index'))
             else:
@@ -50,8 +50,10 @@ def register():
 
     if form.validate_on_submit():
         hashed_password = generate_password_hash(form.password.data)
-        new_user = User(email=form.email.data, password=hashed_password,is_active=False)
+        new_user = User(email=form.email.data, password=hashed_password)
         db.session.add(new_user)
+        db.session.commit()
+        current_user.confirmed = False
         db.session.commit()
         flash('Реєстрація успішна.Тепер Ви можете зайти у свій аккаунт.')
         return redirect(url_for('login'))
@@ -76,8 +78,9 @@ def confirm_email(token):
         flash('Посилання активації ')
         return redirect(url_for('login'))
 
-    # Mark the user as confirmed in the database
+    current_user.confirmed = True
+    db.session.commit()
     
 
-    flash('Your account has been confirmed!', 'success')
-    return redirect(url_for('login'))
+    flash('Ваш аккаунт було активовано!')
+    return redirect(url_for('index'))
