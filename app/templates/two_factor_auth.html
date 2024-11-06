@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="fw-bold mb-2 text-uppercase">2FA аутентифікація</h2>
+
+<p class="text-white-50 mb-5">Введіть код з додатку авторизації,<br>наприклад, Google Authenticator:</p>
+
+<form method="POST" action="{{ url_for('two_factor_auth') }}">
+    {{ form.hidden_tag() }}
+
+    {{ render_field(form.code)}}        
+
+    {{ form.submit(class="btn btn-outline-light btn-lg px-5")}}<br>
+</form>
+<hr>
+<div>
+    <a href="{{ url_for('login') }}" class="text-white-50 fw-bold">Повернутися на сторінку входу</a>
+</div>
+{% endblock %}

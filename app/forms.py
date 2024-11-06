@@ -36,3 +36,8 @@ class RegistrationForm(FlaskForm):
         user = User.query.filter_by(email=email.data).first()
         if user:
             raise ValidationError('Користувач з таким e-mail вже існує.')
+        
+
+class TwoFactorForm(FlaskForm):
+    code = StringField('2FA Код', validators=[DataRequired()])
+    submit = SubmitField('Увійти')

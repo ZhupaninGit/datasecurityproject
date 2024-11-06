@@ -1,0 +1,21 @@
+
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="fw-bold mb-2 text-uppercase">Увімкнення 2FA аутентифікації</h2>
+
+<p class="text-white-50 mb-5">          
+  <ul>
+    <li>Встановіть <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&hl=en&gl=US" target="_blank">Google Authenticator</a> на ваш смартфон.</li>
+    <li>Налаштуйте новий ідентифікатор,відсканувавши QR-код нижче.</li>
+    <li>Після сканування, натисніть,будь ласка, <a href="{{ url_for('index') }}"> на це посилання</a>.</li>
+  </ul>
+</p>
+<img src="data:image/png;base64,{{ qr_code_base64 }}" width="150vh" alt="QR Code for 2FA">
+<p class="text-white-50 mb-5">Або вручну введіть цей код у додатку : <strong>{{ current_user.secret_token }}</strong></p>
+<hr>
+<div>
+    <a href="{{ url_for('index') }}" class="text-white-50 fw-bold">Повернутися на сторінку профілю</a>
+</div>
+
+{% endblock %}
