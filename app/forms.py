@@ -41,3 +41,26 @@ class RegistrationForm(FlaskForm):
 class TwoFactorForm(FlaskForm):
     code = StringField('2FA Код', validators=[DataRequired()])
     submit = SubmitField('Увійти')
+
+
+class PasswordResetRequestForm(FlaskForm):
+    email = StringField('E-mail', validators=[DataRequired(), Email()])
+    submit = SubmitField('Відновити пароль')
+
+class PasswordResetForm(FlaskForm):
+    password = PasswordField('Новий пароль', validators=[DataRequired()])
+    confirm_password = PasswordField('Повторіть новий пароль', 
+                                     validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Змінити пароль')
+
+    def validate_password(self, password):
+        password_data = password.data
+
+        if not re.search(r'[A-Z]', password_data):
+            raise ValidationError("Пароль має містити щонайменше 1 велику літеру.")
+        if not re.search(r'[a-z]', password_data):
+            raise ValidationError("Пароль має містити щонайменше 1 малу літеру.")
+        if not re.search(r'[0-9]', password_data):
+            raise ValidationError("Пароль має містити щонайменше 1 цифру.")
+        if not re.search(r'[!@#$%^&*(),.?]', password_data):
+            raise ValidationError("Пароль має містити щонайменше 1 спеціальний символ (!@#$%^&*(),.?)")

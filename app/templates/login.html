@@ -19,8 +19,12 @@
         {{ form.submit(class="btn btn-outline-light btn-lg px-5")}}<br>
 
     </form>
-
+    <hr>
     <div>
         <p class="mb-0">Ще не маєте аккаунту? <a href="{{url_for('register')}}" class="text-white-50 fw-bold">Реєстрація</a></p>
+    </div>
+    <hr>
+    <div>
+        <p class="mb-0">Забули пароль? <a href="{{url_for('reset_password_request')}}" class="text-white-50 fw-bold">Відновлення паролю</a></p>
     </div>
 {% endblock %}

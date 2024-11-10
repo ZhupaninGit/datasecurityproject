@@ -188,3 +188,47 @@ def disable_2fa():
     db.session.commit()
     flash("Аутентифікацію 2FA вимкнено.")
     return redirect(url_for('index'))
+
+
+from itsdangerous import URLSafeTimedSerializer
+
+serializer = URLSafeTimedSerializer(app.secret_key)
+
+def generate_confirmation_token(email):
+    return serializer.dumps(email, salt='password-reset-salt')
+
+@app.route('/reset_password_request', methods=['GET', 'POST'])
+def reset_password_request():
+    from app.forms import PasswordResetRequestForm
+    form = PasswordResetRequestForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user:
+            token = generate_confirmation_token(user.email)
+            reset_url = url_for('reset_password', token=token, _external=True)
+            html = f'Натисніть на посилання для відновлення паролю: <a href="{reset_url}">Відновити пароль</a>'
+            msg = Message('Відновлення паролю', recipients=[user.email], html=html)
+            mail.send(msg)
+            flash('Посилання для відновлення паролю надіслано на вашу пошту.')
+            return redirect(url_for("login")) 
+        else:
+            flash('Аккаунту з такою електронною поштою не існує.')
+    return render_template('reset_password_request.html', form=form)
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    try:
+        email = serializer.loads(token, salt='password-reset-salt', max_age=20) # 1 година
+    except:
+        flash('Посилання неправильне або сплив термін дії токену.')
+        return redirect(url_for('reset_password_request'))
+    
+    from app.forms import PasswordResetForm
+    form = PasswordResetForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=email).first_or_404()
+        user.password = generate_password_hash(form.password.data)
+        db.session.commit()
+        flash('Ваш пароль було оновлено.')
+        return redirect(url_for('login'))
+    return render_template('reset_password.html', form=form)
