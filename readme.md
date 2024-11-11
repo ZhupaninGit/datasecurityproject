@@ -46,17 +46,17 @@ Here are screenshots with demonstrated work
 
 ### Screenshot 9: Password system OAuth
 
-![Screenshot 9](screenshots\password_system_oauth.jpg)
+![Screenshot 9](screenshots/password_system_oauth.jpg)
 
 
 ### Screenshot 10: Password system restore password
 
-![Screenshot 10](screenshots\password_system_restore_password_email.jpg)
+![Screenshot 10](screenshots/password_system_restore_password_email.jpg)
 
 
 ### Screenshot 11: Password system restore password
 
-![Screenshot 11](screenshots\password_system_restore_password.jpg)
+![Screenshot 11](screenshots/password_system_restore_password.jpg)
 
 
 
