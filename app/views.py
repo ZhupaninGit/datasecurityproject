@@ -181,7 +181,7 @@ def enable_2fa():
     
     qr = qrcode.make(provisioning_uri)
     buffered = BytesIO()
-    qr.save(buffered, format="PNG")
+    qr.save(buffered,"PNG")
     qr_code_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
     
     return render_template('enable_2fa.html', qr_code_base64=qr_code_base64)
@@ -224,7 +224,7 @@ def reset_password_request():
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     try:
-        email = serializer.loads(token, salt='password-reset-salt', max_age=20) # 1 година
+        email = serializer.loads(token, salt='password-reset-salt', max_age=3600) # 1 година
     except:
         flash('Посилання неправильне або сплив термін дії токену.')
         return redirect(url_for('reset_password_request'))
