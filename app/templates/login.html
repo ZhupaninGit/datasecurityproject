@@ -16,6 +16,12 @@
 
         <!-- <p class="small mb-5 pb-lg-2"><a class="text-white-50" href="#!">Forgot password?</a></p> -->
 
+        <br>
+        <a href="{{ url_for('oauth2_authorize', provider='google') }}" class="btn btn-outline-light btn-lg px-5">
+            <i class="fa fa-github"></i> Увійти за допомогою Google
+        </a>     
+        <br><br>
+
         {{ form.submit(class="btn btn-outline-light btn-lg px-5")}}<br>
 
     </form>
