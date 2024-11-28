@@ -14,7 +14,7 @@
             {{ render_field(form.password) }}<br>
         </div>
 
-        <!-- <p class="small mb-5 pb-lg-2"><a class="text-white-50" href="#!">Forgot password?</a></p> -->
+        {{ form.submit(class="btn btn-outline-light btn-lg px-5")}}<br>
 
         <br>
         <a href="{{ url_for('oauth2_authorize', provider='google') }}" class="btn btn-outline-light btn-lg px-5">
@@ -22,7 +22,6 @@
         </a>     
         <br><br>
 
-        {{ form.submit(class="btn btn-outline-light btn-lg px-5")}}<br>
 
     </form>
     <hr>

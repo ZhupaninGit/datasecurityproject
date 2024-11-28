@@ -49,7 +49,6 @@ def login():
         login_attempt = LoginAttempt(email=form.email.data)
         
         if user:
-            # Check if the user is locked
             if user.locked_until and user.locked_until > datetime.utcnow():
                 flash('Ваш аккаунт заблоковано. Спробуйте пізніше.')
                 return redirect(url_for('login'))
@@ -65,6 +64,7 @@ def login():
                 
                 user.failed_attempts = 0
                 user.locked_until = None
+                db.session.add(login_attempt)
                 db.session.commit()
                 
                 flash('Успішний вхід')
@@ -85,6 +85,7 @@ def login():
 
     return render_template('login.html', form=form)
 
+
 @app.route('/two_factor_auth', methods=['GET', 'POST'])
 def two_factor_auth():
     from app.forms import TwoFactorForm
@@ -96,6 +97,8 @@ def two_factor_auth():
         return redirect(url_for('login'))
     
     user = User.query.get(user_id)
+    login_attempt = LoginAttempt(email=user.email)
+
     if form.validate_on_submit():
         totp = pyotp.TOTP(user.secret_token)
         
@@ -103,12 +106,20 @@ def two_factor_auth():
             login_user(user)
             session.pop('2fa_user_id', None)
             
+            login_attempt.success = True
+            db.session.add(login_attempt)
+            db.session.commit()
+
             flash('Успішний вхід з 2FA!')
             return redirect(url_for('index'))
         else:
+            login_attempt.success = False
+            db.session.add(login_attempt)
+            db.session.commit()
             flash('Неправильний 2FA код.')
 
     return render_template('two_factor_auth.html', form=form)
+
 
 
 
@@ -201,7 +212,7 @@ from itsdangerous import URLSafeTimedSerializer
 serializer = URLSafeTimedSerializer(app.secret_key)
 
 def generate_confirmation_token(email):
-    return serializer.dumps(email, salt='password-reset-salt')
+    return serializer.dumps(email, salt=os.getenv('PASSWORD_RESET_SALT'))
 
 @app.route('/reset_password_request', methods=['GET', 'POST'])
 def reset_password_request():
@@ -234,6 +245,8 @@ def reset_password(token):
     if form.validate_on_submit():
         user = User.query.filter_by(email=email).first_or_404()
         user.password = generate_password_hash(form.password.data)
+        user.locked_until = None
+        user.failed_attempts = 0
         db.session.commit()
         flash('Ваш пароль було оновлено.')
         return redirect(url_for('login'))
@@ -248,10 +261,8 @@ def oauth2_authorize(provider):
     if provider_data is None:
         abort(404)
 
-    # generate a random string for the state parameter
     session['oauth2_state'] = secrets.token_urlsafe(16)
 
-    # create a query string with all the OAuth2 parameters
     qs = urlencode({
         'client_id': provider_data['client_id'],
         'redirect_uri': url_for('oauth2_callback', provider=provider,
@@ -261,7 +272,6 @@ def oauth2_authorize(provider):
         'state': session['oauth2_state'],
     })
 
-    # redirect the user to the OAuth2 provider authorization URL
     return redirect(provider_data['authorize_url'] + '?' + qs)
 
 
@@ -274,38 +284,36 @@ def oauth2_callback(provider):
     if provider_data is None:
         abort(404)
 
-    # if there was an authentication error, flash the error messages and exit
     if 'error' in request.args:
         for k, v in request.args.items():
             if k.startswith('error'):
                 flash(f'{k}: {v}')
+        login_attempt = LoginAttempt(email=session.get('oauth_email'))
+        login_attempt.success = False
+        db.session.add(login_attempt)
+        db.session.commit()
         return redirect(url_for('index'))
 
-    # make sure that the state parameter matches the one we created in the
-    # authorization request
     if request.args['state'] != session.get('oauth2_state'):
         abort(401)
 
-    # make sure that the authorization code is present
     if 'code' not in request.args:
         abort(401)
 
-    # exchange the authorization code for an access token
     response = requests.post(provider_data['token_url'], data={
         'client_id': provider_data['client_id'],
         'client_secret': provider_data['client_secret'],
         'code': request.args['code'],
         'grant_type': 'authorization_code',
-        'redirect_uri': url_for('oauth2_callback', provider=provider,
-                                _external=True),
+        'redirect_uri': url_for('oauth2_callback', provider=provider, _external=True),
     }, headers={'Accept': 'application/json'})
     if response.status_code != 200:
         abort(401)
+
     oauth2_token = response.json().get('access_token')
     if not oauth2_token:
         abort(401)
 
-    # use the access token to get the user's email address
     response = requests.get(provider_data['userinfo']['url'], headers={
         'Authorization': 'Bearer ' + oauth2_token,
         'Accept': 'application/json',
@@ -314,22 +322,40 @@ def oauth2_callback(provider):
         abort(401)
     email = provider_data['userinfo']['email'](response.json())
 
-    # find or create the user in the database
-    user = db.session.scalar(db.select(User).where(User.email == email))
-    if user is None:
-        user = User(
-            email=email,
-            password=secrets.token_hex(16),  # generate a random password
-            confirmed=True,  # consider user verified if they pass OAuth
-            failed_attempts=0,
-            locked_until=None,
-            is_admin=False,
-            is_two_factor_enabled=False,
-            secret_token=None
-        )
-        db.session.add(user)
-        db.session.commit()
+    login_attempt = LoginAttempt(email=email)
+    if response.status_code == 200:
+        user = db.session.scalar(db.select(User).where(User.email == email))
+        if user is None:
+            user = User(
+                email=email,
+                password=secrets.token_hex(16),
+                confirmed=True,  
+                failed_attempts=0,
+                locked_until=None,
+                is_admin=False,
+                is_two_factor_enabled=False,
+                secret_token=None
+            )
+            db.session.add(user)
+            db.session.commit()
+        
 
-    # log the user in
-    login_user(user)
-    return redirect(url_for('index'))
+        if user.is_two_factor_enabled:
+            session['2fa_user_id'] = user.id
+            login_attempt.success = False  
+        else:
+            user.locked_until = None
+            user.failed_attempts = 0
+            login_user(user)
+            login_attempt.success = True
+    else:
+        login_attempt.success = False
+
+    db.session.add(login_attempt)
+    db.session.commit()
+
+    if login_attempt.success:
+        return redirect(url_for('index'))
+    else:
+        flash('Помилка при аутентифікації через Google.')
+        return redirect(url_for('login'))
